@@ -1,0 +1,353 @@
+---
+title: "LinDogProjectIsotopes"
+author: "Chris Stantis"
+date: '2022-08-02'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F)
+knitr::opts_chunk$set(warning = F)
+library(tidyverse)
+library(viridis)
+library(gridExtra)
+library(ggpubr)
+library(ggrepel)
+
+Diet <- read_csv("220804CarbonNitrogenData.csv", 
+     col_types = cols(molsN = col_skip(), 
+     molsC = col_skip()))
+
+# Let's assign Mutton dark purple and Lampchop green-blue when comparing the two of them alone.
+dogs <- c("SB Village Dog" = "#1FA187FF", "Mutton" = "#440154FF")
+dogshape <- c("SB Village Dog" = 15, "Mutton" = 17)
+
+library(scales)
+cols2 <- c( "#440154FF", "#1FA187FF", "#365C8Dff", "#2E6E8EFF", "#277F8EFF", "#21908CFF", "#1FA187FF", "#2DB27DFF", "#4AC16DFF", "#71CF57FF", "#9FDA3AFF", "#CFE11CFF", "#FDE725FF")
+cols3 <- c("#440154FF", "#1FA187FF","#03051AFF", "#1B112BFF", "#36193EFF", "#521E4DFF", "#701F57FF", "#8E1D5BFF", "#AE1759FF", "#CB1B4FFF", "#E13342FF", "#F37651FF", "#F5966DFF")
+
+Converted <- mutate(
+  Diet,
+    C_coll = case_when(
+      tissue == "Hair" ~ C_coll + 1.41, 
+      tissue == "Bone" ~ C_coll
+    ), 
+    N = case_when(
+    tissue == "Hair" ~ N + 0.86,
+    tissue == "Bone" ~ N
+    ), 
+  C_coll = round(C_coll, 2), 
+  N = round(N, 2)
+  )
+
+
+MuttonBone <- subset(Converted, tissue == "Bone" & individual == "Mutton")
+SBVillageDogBone <- subset(Converted, tissue == "Bone" & individual == "SB Village Dog")
+
+ComparativeCN <- read_csv("ComparativeCN.csv")
+
+df <- subset(Converted, tissue == "Bone") %>% 
+  mutate(
+    location = individual
+  )
+
+df2 <- merge(df, ComparativeCN, all = T)
+
+df2$location2 <- factor(df2$location, levels = c("Mutton", "SB Village Dog", "Late-Holocene Deer", "Bridge River", "Broken Group Islands", "Cathlapotle", "Dionisio", "Gwaii Hannas", "Keatley Creek", "Namu", "Port Hardy", "Sliammon", "Sumas"))
+```
+
+# Intro
+
+I'm using this Markdown for the analysis of d\^13C and d\^15N from bone and hair.
+
+I've cleaned the file from how it was sent to me, changing variable names and adding new variables to identify hair segments and tissue types. I've gone ahead and combined the three bone samples for each dog as well.
+
+All the preservation values suggest well-preserved tissues.
+
+
+Let's work out the average bone values so we can have ranges on the graphs. We also want to convert hair to bone to have some comparative values. If we assume mammalian bone collagen and keratin metabolic processes are similar, we can use O'Connell *et al.* 2001's findings, where "there was a mean enrichment of 1.41\u203 in bone collagen \delta\^13 C relative to hair keratin...and a mean enrichment of 0.86\u203 in d15N" (p. 1250). While we can't be sure that dog metabolics are the same when it comes to hair and bone formation, using this follows McManus-Fry *et al.* 2018, who found good agreement in fur and bone in the same dogs when this correction was applied.
+
+Creating a df called "Converted" with hair converted to bone values. Also rounding digits in C_coll and N to try to prevent annoyingly long output for stats. The following mutation probably doesn't need to be a `case_when` and could be an `if_else`, but I was having trouble with the mutate function. *Tip*: remember that mutate() needs to be assigned to somewhere or it doesn't appear in your environment.
+
+# First looks
+
+```{r firstPlots, fig.cap = "Figure 1"}
+ggplot(data = Converted, aes(x = C_coll, y = N, color = individual, shape = tissue)) +
+  geom_point(size = 3) +
+  theme_classic() +
+  scale_shape_manual(values = c(17, 15)) +
+  scale_color_manual(values = dogs) +
+  theme(
+    axis.title = element_text(size = 12), 
+    ) +
+  labs(
+    color = "Dog", 
+    shape = "Tissue Type",
+    x = expression(paste(delta^13, "C"[collagen], " (\u2030, VPDB)")), 
+    y = expression(paste(delta^15, "N", " (\u2030, AIR)"))
+  )
+```
+
+When we plot the bone and hair of the two dogs, we see large differences between the two dogs, with bone and corrected hair values grouping together. SB Village Dog displays relatively restricted values across all samples for nitrogen and carbon, `r mean(subset(Converted, individual == "SB Village Dog")$N)` +- `r sd(subset(Converted, individual == "SB Village Dog")$N)` and `r mean(subset(Converted, individual == "SB Village Dog")$C_coll)` +- `r sd(subset(Converted, individual == "SB Village Dog")$C_coll)`, relatively.
+
+Mutton has far lower nitrogen and more negative carbon values.  `r mean(subset(Converted, individual == "Mutton")$N)` +- `r sd(subset(Converted, individual == "Mutton")$N)` and `r mean(subset(Converted, individual == "Mutton")$C_coll)` +- `r sd(subset(Converted, individual == "Mutton")$C_coll)`, relatively.
+
+```{r statsCompare}
+#t.test((subset(Converted, individual == "Mutton")$C_coll), subset(Converted, individual == "SB Village Dog")$C_coll)
+
+#t.test((subset(Converted, individual == "Mutton")$N), subset(Converted, individual == "SB Village Dog")$N)
+summary(manova(cbind(C_coll, N) ~individual, data = Converted))
+```
+Though sample sizes are small, one-way MANOVA shows significant differences between SB Village Dog's and Mutton's stable isotope values. 
+
+# Comparing other PNW dogs
+
+Let's include what Hillis _et al_ have for dog data, as well as contemporaneous deer to stand as an example of a terrestrial herbivore. 
+
+```{r plotPNW, fig.cap = "Figure 2"}
+ggplot() + 
+  geom_errorbar(data = df2, aes(
+    x = C_coll, y = N,
+    ymin = N - NSD,
+    ymax = N + NSD), color = 'grey', size = 0.75) + 
+  geom_errorbarh(data = df2, aes(
+    x = C_coll, y = N, 
+    xmin = C_coll - C_collSD, 
+    xmax = C_coll + C_collSD), color = 'grey', size = 0.75) +
+  geom_point(data = df2, aes(x = C_coll, y = N, color = location2, shape = location2), size = 4) + 
+  geom_label_repel(data = df2, aes(x = C_coll, y = N, label = location2, size = NULL, color = NULL), nudge_y = 0.75) +
+  theme_classic() + 
+  scale_color_manual(values = cols2) + 
+  scale_shape_manual(values = c(15, 17, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16)) + 
+  labs(
+    color = "",
+    shape = "", 
+    y = expression(paste(delta^15, "N", " (\u2030, AIR)")), 
+    x = expression(paste(delta^13, "C"[collagen], " (\u2030, VPDB)"))
+  ) + 
+  theme(legend.position = 'none', 
+        axis.text.x = element_text(size = 12),
+        axis.text.y = element_text(size = 12), 
+        axis.title = element_text(size = 16))
+  
+```
+We can see that while SB Village Dog's bone values align with other PNW dogs, Mutton's bone value is suggestive of a terrestrial omnivore. 
+
+Bone is representative of several years of averaged dietary input, as a result of constant remodeling. If Mutton was taken by Gibbs around one year of age and lived with Gibbs for another year or so, we can assume that the bone sample, taken from a metacarpal shaft, possibly represents both years of his like. The turnover rate of dogs is not well known and so there's no way of knowing what this sample represents, but likely years of time.  
+
+
+# Examining Hair Values
+
+
+Let's plot the hair samples, with the bone values as horizontal lines for comparison. Hair was cut as close to the skin as possible, and undercoat hairs removed so only guard hairs were present to try to account for potential differential growth rates. The hairs were cut in 1 cm sections, with the last section being a few cm of hair to make weight. For SB Village Dog, sample 5 is the last 4 cm of growth, and for Mutton, Sample 5 is two cm combined and Sample 6 is 4 cm to make weight. 
+
+The rate of dog hair growth is not well estblished. We know it varies seasonally, and between breeds. All we can say confidently is that each sample represents the diet of some chunk of time discrete from the sample before or after it, and that the sample closest to skin is most representative of these dog's last foods before death. 
+
+## Longitundinal Nitrogen
+
+```{r longitudinalNitrogen, fig.cap = "Figure 3"}
+#Longitudinal Nitrogen
+ggplot() +
+  geom_hline(yintercept = SBVillageDogBone$N, color = "#27AD81FF") + 
+  geom_hline(yintercept = MuttonBone$N, color = "#440154FF") + 
+  geom_point(data = subset(Converted, tissue = "Hair"), aes(x = sample_number, y = N, color = individual, shape = individual), size = 3) +
+  scale_x_reverse(lim = c(6,1), 
+                breaks = c(6, 5, 4, 3, 2, 1)) + 
+  theme_classic() +
+  scale_color_manual(values = dogs) +
+  scale_shape_manual(values = dogshape) +
+  theme(
+    axis.title = element_text(size = 12), 
+    ) +
+  labs(
+    color = "Dog", 
+    shape = "Dog",
+    x = "Hair Sample", 
+    y = expression(paste(delta^15, "N", " (\u2030, AIR)"))
+  )
+
+```
+
+For nitrogen, we see both dogs have small ranges in nitrogen values that hover near their bone values. SB Village Dog shows nitrogen hair values with a mean of  `r mean(subset(Converted, individual == "SB Village Dog" & tissue == "Hair")$N)` +- `r sd(subset(Converted, individual == "SB Village Dog" & tissue == "Hair")$N)`. With low SD, we can assume SB Village Dog ate at pretty much the same trophic level across the time period this hair represents. As with SB Village Dog's bone, we see higher values compared to Mutton. 
+
+For Mutton, we see similarly restricted nitrogen values, `r mean(subset(Converted, individual == "Mutton" & tissue == "Hair")$N)` +- `r sd(subset(Converted, individual == "Mutton" & tissue == "Hair")$N)`. Mutton's consumption as a terrestrial-based omnivore did not shift over time. 
+
+That the nitrogen bone values fall near the converted hair values may be suggestive that the human-based conversion rates are good models for differences in dog tissues. 
+
+That Mutton's hair values are close to his bone values are somewhat of a surprise, as we expected his bone values to be more reflective of his time with his Indigenous owners, and many of the analyzed archaeologically-derived dogs from this area have a marine-reliant diet. I predicted that Mutton's bone display higher nitrogen values than his hair to reflect his time back 'home', previous to Gibbs. 
+
+## Longitudinal Carbon
+
+```{r longitudinalCarbon, fig.cap = "Figure 4"}
+#Longitudinal Carbon
+ggplot() +
+  geom_hline(yintercept = MuttonBone$C_coll, color = "#440154FF") + 
+  geom_hline(yintercept = SBVillageDogBone$C_coll, color = "#27AD81FF") + 
+  geom_point(data = subset(Converted, tissue = "Hair"), aes(x = sample_number, 
+                                                            y = C_coll, 
+                                                            color = individual, 
+                                                            shape = individual),
+             size = 3) +
+  scale_x_reverse(lim = c(6,1), 
+                  breaks = c(6, 5, 4, 3, 2, 1)) + 
+  scale_y_continuous(breaks = c(-14, -16, -18, -20)) +
+  scale_shape_manual(values = dogshape) +
+  scale_color_manual(values = dogs) +
+  theme_classic() +
+  theme(
+    axis.title = element_text(size = 12), 
+    ) +
+  labs(
+    color = "Dog", 
+    shape = "Dog",
+    x = "Hair Sample", 
+    y = expression(paste(delta^13, "C"[keratin], " (\u2030, VPDB)"))
+  )
+```
+
+
+Compared to the nitrogen values, there appear to be little overlap between hair and bone carbon stable isotope values. For SB Village Dog, `r mean(subset(Converted, individual == "SB Village Dog" & tissue == "Hair")$C_coll)` +- `r sd(subset(Converted, individual == "SB Village Dog" & tissue == "Hair")$C_coll)` for hair compared to a bone carbon value of -14.53. Not hugely different, but not overlaps. With an SD of 0.47 for both carbon and nitrogen hair samples, SB Village Dog does not show great variation across time: they were consuming much the same types of foods across their live as recorded. 
+
+Mutton however shows wide variation in carbon values. `r mean(subset(Converted, individual == "Mutton" & tissue == "Hair")$C_coll)` +- `r sd(subset(Converted, individual == "Mutton" & tissue == "Hair")$C_coll)` for hair compared to a bone carbon value of -18.53.
+
+We can see on Figure 4 that Mutton's oldest hair displays the highest carbon values, and each subsequent hair section displays lower carbon values until Sample 1, the hair sample most representative of Mutton's diet before death. Interestingly, Mutton's bone sample aligns most closely with Sample 1. 
+
+# Discussion and Interpretation
+
+For SB Village Dog, we see values suggestive of what we know about village dogs: a highly marine diet. Scavenging or being purposely fed similar foods to villagers, SB Village Dog did not show evident of seasonal shifts in food sources in their hair values. SB Village Dog's stable isotope values are similar to those of other archaeological-derived dogs from the broad region. 
+
+For Mutton, his life story is (unsurprisingly) more complicated. His bone values are suggestive of a terrestrial omnivore. Mixed modelling might give more insight into predicted input. However, his life with Gibbs likely would not have included the same foods as those living in PNW villages and so we need to add other priors to the model, including corn. 
+
+Mutton's hair nitrogen stable isotope values, like SB Village Dog, show little changes over time, suggesting a diet unchanging with season etc. (at least, unchanging in ways that isotopes can identify). Interestingly, given bone's averaging of years of time, I expected his bone nitrogen values to be higher relative to what I expected for the naturalists' diet, which is reflected in Mutton's hair. Instead, all tissues are reflective of heavy terrestrial input. There are two potential scenarios I see for this: 
+
+1. Mutton's bone values are reflective of his entire life, and he always ate a more terrestrial diet relative to the other PNW dogs analyzed. 
+2. Mutton's bone has a faster turnover than I predicted, and largely only reflects his time with Gibbs. 
+
+Both scenarios are plausible. In recent interviews with elders, some note that wooly dogs in their communities would be fed a terrestrial diet to encourage rapid hair growth and ideal texture (*Audrey check me on this*). Mutton may have come from a community with similar beliefs in keeping wooly dogs. 
+
+Bone turnover in dogs is not well-established. We know that infants and juveniles have faster turnover than adults in a given species, and dogs are generally considered adults at one year of age. Mutton's early life might not be well reflected in his bone values and his bone might largely represent the same timing as his hair- when he was taken by Gibbs. 
+
+Regarding Mutton's carbon values, we see the oldest hair sample display high carbon stable isotope value, and then a steep decline to the most recent hair sample, which is also in line with his bone value. High carbon might be reflective of marine values similar to SB Village Dog's, but without concomitant high nitrogen values that is unlikely unless it's something of a low trophic level such as edible seaweed. Instead, the high carbon values are likely a reflection of some C4 plant input. There are no wild edible C4 plants in the area to my knowledge, but nearby settlement forts would have had supplies such as sugarcane (in the form of refined sugar, or more likely molasses) and corn, both of which are C4 plants. 
+
+While molassess as an additive might not have a significant effect on carbon values, corn may have shifted carbon values without also raising Mutton's nitrogen values. Cornmeal mush, Johnny cakes, cornbread, etc. were staple foods at the time. Gibbs might have resupplied at a fort and returned to exploring, eating larger amounts of corn (and sharing with Mutton). As supplies dwindled and Gibbs supplemented his supplied with wild provision, the relative amount of corn dropped off, reaching the same proportion reflected in Mutton's bone values when Mutton died. 
+
+Did Gibbs then return to a camp to re-supply as well as prepare Mutton's body to be sent to the Smithsonian? I don't know but our historical experts might. 
+
+## Beyond Diet
+
+Gibbs records that Mutton got sick (*I don't have this information, I could use more details*). Stable isotope values are not only reflective of diet, but also of malnutrition and metabolic disequilibrium (Katzenberg and Lowell 1999, Stantis and Kendall forthcoming). Generally, physiological stress events are recorded as elevated d15N values and concomitant d13C reductions. This is not present in Mutton's serial hair samples. Thus, there is no isotopic evidence of any chronic physiological stress.
+
+However, what we do see is likely influx of corn as a food source. Corn is often a filler in modern dog foods to save costs, but is not necessarily meant to be a large part of a dog's diet. Whether on the cob or processed as meal it has a high glycemic index for dogs and is high in fiber that dog's cannot digest well. If on the cob, consumed chunks of the cob can cause intestinal blockages and other digestive issues. 
+
+We cannot know if Mutton's new diet with Gibbs contributed to his ill health, but the change in diet compared to other wooly dogs is observable.
+
+# Plots for Publications
+
+Let's try for a square 4x4 grid, although admittedly I only currently have three plots I really want to show off. 
+
+```{r plotsForPub}
+figa <- ggplot() + 
+  geom_errorbar(data = ComparativeCN, aes(
+    x = C_coll, y = N,
+    ymin = N - NSD,
+    ymax = N + NSD), color = 'grey', size = 0.5) + 
+  geom_errorbarh(data = df2, aes(
+    x = C_coll, y = N, 
+    xmin = C_coll - C_collSD, 
+    xmax = C_coll + C_collSD), color = 'grey', size = 0.5) +
+  geom_point(data = df2, aes(x = C_coll, y = N, color = location2, shape = location2), size = 3) + 
+  theme_classic() + 
+  theme(legend.position = "bottom") +
+  scale_color_manual(values = cols2) + 
+  scale_shape_manual(values = c(17, 15, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16)) + 
+  labs(
+    color = "",
+    shape = "", 
+    y = expression(paste(delta^15, "N", " (\u2030, AIR)")), 
+    x = expression(paste(delta^13, "C"[collagen], " (\u2030, VPDB)"))
+  )
+
+figb <- ggplot() +
+  geom_hline(yintercept = SBVillageDogBone$N, color = "#27AD81FF") + 
+  geom_hline(yintercept = MuttonBone$N, color = "#440154FF") + 
+  geom_point(data = subset(Converted, tissue = "Hair"), aes(x = sample_number, y = N, color = individual, shape = individual), size = 3) +
+  scale_x_reverse(lim=c(6,1)) + 
+ # scale_x_continuous(breaks = c(6, 5, 4, 3, 2, 1)) +
+  theme_classic() +
+  scale_color_manual(values = dogs) +
+  scale_shape_manual(values = dogshape) +
+  theme(
+    legend.position = "none",
+    axis.title = element_text(size = 12), 
+    ) +
+  labs(
+    color = "Dog", 
+    shape = "Dog",
+    x = "Hair Sample", 
+    y = expression(paste(delta^15, "N", " (\u2030, AIR)"))
+  )
+
+figc <- ggplot() +
+  geom_hline(yintercept = MuttonBone$C_coll, color = "#440154FF") + 
+  geom_hline(yintercept = SBVillageDogBone$C_coll, color = "#27AD81FF") + 
+  geom_point(data = subset(Converted, tissue = "Hair"), aes(x = sample_number, y = C_coll, color = individual, shape = individual), size = 3) +
+  scale_x_reverse(lim=c(6,1)) + 
+  scale_y_continuous(breaks = c(-14, -16, -18, -20)) +
+  scale_shape_manual(values = dogshape) +
+  scale_color_manual(values = dogs) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    axis.title = element_text(size = 12), 
+    ) +
+  labs(
+    color = "Dog", 
+    shape = "Dog",
+    x = "Hair Sample", 
+    y = expression(paste(delta^13, "C"[keratin], " (\u2030, VPDB)")),
+  ) 
+
+grid.arrange(figa, arrangeGrob(figb, figc), ncol = 2)
+ggarrange(figa,
+          ggarrange(figb, figc, ncol = 2, labels = c("B", "C")), 
+          nrow = 2, 
+          labels = "A"
+)
+ggsave("IsoFig.pdf")
+
+```
+
+
+```{r TwoAxisHair}
+par(mar = c(4, 4, 4, 4) + 0.4)              # Additional space for second y-axis
+plot(N~sample_number, col = dogs[factor(individual)],
+     data = subset(Converted, tissue = "Hair"), pch = 16, 
+     xlim = rev(range(1,6)), 
+     xlab = 'Sample', 
+     ylab = expression(paste(delta^15, "N", " (\u2030, AIR)")), 
+     las = 1, 
+     cex = 1.2
+     )# Create first plot
+abline(h = MuttonBone$N, col = "#440154FF", lty = 1)
+abline(h = SBVillageDogBone$N, col = "#27AD81FF", lty = 1) 
+par(new = TRUE)                             # Add new plot
+plot(C_coll~sample_number, col = dogs[factor(individual)], 
+     data = subset(Converted, tissue = "Hair"), 
+     pch = 17, ylim = c(-20, -12),              # Create second plot without axes
+     axes = FALSE, xlab = "", ylab = "", xlim = rev(range(1,6)), 
+     cex = 1.2)
+abline(h = MuttonBone$C_coll, col = "#440154FF", lty = 3)  
+abline(h = SBVillageDogBone$C_coll, col = "#27AD81FF", lty = 3) 
+legend("topleft", 
+       legend = c("Mutton", "SB Village Dog"), 
+       col = dogs, 
+       pch = 16)
+axis(side = 4, at = pretty(range(-20:-12)), 
+     las = 1)      # Add second axis
+# Add second axis label
+mtext(expression(paste(delta^13, "C"[keratin], " (\u2030, VPDB)")),
+      side = 4, line = 3) 
+
+
+
+```
