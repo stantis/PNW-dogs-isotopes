@@ -1,12 +1,12 @@
-location,C_coll,C_collSD,N,NSD,n,ref
-Keatley Creek,-16.3,0.9,13.8,1.7,6,Barta 2006
-Bridge River,-15.4,0.4,14.1,0.5,9,Tifental 2015
-Sumas,-14.8,,15.2,,1,Barta 2006
-Cathlapotle,-14.5,0.6,16.4,0.8,5,Ames et al. 2015
-Namu,-13,0.6,16.4,0.8,14,Cannon et al. 1999
-Sliammon,-12.8,0.2,16.3,0.4,2,Zimmerman 2014
-Dionisio,-12.7,0.4,15.6,0.5,5,Grier 2006
-Gwaii Hannas,-12.2,,17.9,,1,Szpak et al. 2009
-Port Hardy,-11.3,,16.1,,1,Barta 2006
-Broken Group Islands,-12.14,0.52,16.8,0.46,14,Hillis 2020
-Late-Holocene Deer ,-22.7,1.4,3.3,0.9,6,Hillis 2020
+location,C_coll,C_collSD,N,NSD,n,ref,full_ref
+Cathlapotle,-14.5,0.6,16.4,0.8,5,Ames et al. 2015,"Ames, Kenneth M, Michael P Richards, Camilla F Speller, Dongya Y Yang, R Lee Lyman, and Virginia L Butler. ""Stable Isotope and Ancient DNA Analysis of Dog Remains from Cathlapotle (45cl1), a Contact-Era Site on the Lower Columbia River."" Journal of Archaeological Science 57 (2015): 268-82."
+Keatley Creek,-16.3,0.9,13.8,1.7,6,Barta 2006,"Barta, Jodi Lynn. ""Addressing Issues of Domestication and Cultural Continuity on the Northwest Coast Using Ancient DNA and Dogs."" PhD Dissertation, McMaster University, 2006."
+Sumas,-14.8,,15.2,,1,Barta 2006,"Barta, Jodi Lynn. ""Addressing Issues of Domestication and Cultural Continuity on the Northwest Coast Using Ancient DNA and Dogs."" PhD Dissertation, McMaster University, 2006."
+Port Hardy,-11.3,,16.1,,1,Barta 2006,"Barta, Jodi Lynn. ""Addressing Issues of Domestication and Cultural Continuity on the Northwest Coast Using Ancient DNA and Dogs."" PhD Dissertation, McMaster University, 2006."
+Namu,-13,0.6,16.4,0.8,14,Cannon et al. 1999,"Cannon, Aubrey, Henry P Schwarcz, and Martin Knyf. ""Marine-Based Subsistence Trends and the Stable Isotope Analysis of Dog Bones from Namu, British Columbia."" Journal of Archaeological Science 26, no. 4 (1999): 399-407."
+Dionisio,-12.7,0.4,15.6,0.5,5,Grier 2006,"Grier, Colin. ""Affluence on the Prehistoric Northwest Coast of North America."" In Beyond Affluent-Foragers: Rethinking Hunter-Gatherer Complexity, edited by Colin Grier, Junzo Uchiyama and Jangsuk Kim, 126-35: Oxbow Books, 2006."
+Broken Group Islands,-12.14,0.52,16.8,0.46,14,Hillis 2020,"Hillis, Dylan, Iain McKechnie, Eric Guiry, Denis E. St. Claire, and Chris T. Darimont. ""Ancient Dog Diets on the Pacific Northwest Coast: Zooarchaeological and Stable Isotope Modelling Evidence from Tseshaht Territory and Beyond."" Scientific Reports 10, no. 1 (2020/10/01 2020): 15630."
+Late-Holocene Deer ,-22.7,1.4,3.3,0.9,6,Hillis 2020,"Hillis, Dylan, Iain McKechnie, Eric Guiry, Denis E. St. Claire, and Chris T. Darimont. ""Ancient Dog Diets on the Pacific Northwest Coast: Zooarchaeological and Stable Isotope Modelling Evidence from Tseshaht Territory and Beyond."" Scientific Reports 10, no. 1 (2020/10/01 2020): 15630."
+Gwaii Hannas,-12.2,,17.9,,1,Szpak et al. 2009,"Szpak, Paul, Trevor J Orchard, and Darren R Gröcke. ""A Late Holocene Vertebrate Food Web from Southern Haida Gwaii (Queen Charlotte Islands, British Columbia)."" Journal of Archaeological Science 36, no. 12 (2009): 2734-41."
+Bridge River,-15.4,0.4,14.1,0.5,9,Tifental 2016,"Tifental, Emilia. ""The Bridge River Dogs: Interpreting Adna and Stable Isotope Analysis Collected from Dog Remains."" Masters Thesis, University of Montana, 2016."
+Sliammon,-12.8,0.2,16.3,0.4,2,Zimmerman 2014,"Zimmerman, Kasia Anne. ""Changing Ways, Constant Companions: The Ancient DNA and Local Knowledge of Tla'amin Dogs."" Masters Thesis, Simon Fraser University, 2014."
